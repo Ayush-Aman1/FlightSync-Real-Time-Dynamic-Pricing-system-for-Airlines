@@ -1,303 +1,731 @@
-# FlightSync - Real-Time Dynamic Pricing System for Airlines
+# FlightSync - Airline Dynamic Pricing System
 
-## 🛫 Project Overview
+A comprehensive full-stack web application for airline ticket booking with dynamic pricing, built as a Database Management Systems (DBMS) course project.
 
-FlightSync is an intelligent airline pricing and booking platform that combines traditional relational database management (PostgreSQL) with NoSQL flexibility (MongoDB) for real-time analytics. The system features dynamic pricing based on demand, customer behavior tracking, and AI-powered insights.
 
-**Team Members:**
-- Astitwa Tanmay (1RV23CS056)
-- Ayush Aman (1RV23CS059)
-- Animesh Sapra (1RV23CS036)
-- Arpita (1RV23CS048)
+## Table of Contents
 
-**Institution:** RV College of Engineering, Bengaluru  
-**Course:** Database Management Systems (CD252IA)
-
----
-
-## 📁 Project Structure
-
-```
-flightsync/
-├── sql/                          # PostgreSQL database files
-│   ├── 01_schema.sql            # Table definitions
-│   ├── 02_triggers.sql          # Triggers and functions
-│   ├── 03_views.sql             # Views for analytics
-│   ├── 04_sample_data.sql       # Sample data for testing
-│   └── 05_queries.sql           # Stored procedures & common queries
-├── nosql/                        # MongoDB configuration
-│   └── mongodb_schema.js        # Collection schemas and indexes
-├── python/                       # Python application
-│   ├── app.py                   # Flask REST API
-│   ├── config.py                # Configuration & DB connections
-│   ├── models.py                # Pydantic data models
-│   ├── services.py              # Business logic layer
-│   ├── pricing_engine.py        # Dynamic pricing algorithm
-│   ├── sync_service.py          # PostgreSQL to MongoDB sync
-│   └── requirements.txt         # Python dependencies
-├── docs/                         # Documentation
-└── .env.example                  # Environment variables template
-```
+- [Overview](#-overview)
+- [Features](#-features)
+- [System Architecture](#-system-architecture)
+- [Database Schema](#-database-schema)
+- [Tech Stack](#-tech-stack)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Running the Application](#-running-the-application)
+- [API Documentation](#-api-documentation)
+- [Dynamic Pricing Algorithm](#-dynamic-pricing-algorithm)
+- [Loyalty Program](#-loyalty-program)
 
 ---
 
-## 🏗️ Architecture
+## Overview
 
-### Hybrid Database Design
+FlightSync is a dynamic pricing system for airlines that automatically adjusts flight prices based on demand, seat availability, time to departure, and booking patterns. The system provides both a customer-facing booking portal and an admin dashboard for airline management.
+
+**Key Highlights:**
+- Real-time dynamic pricing engine
+- Complete booking lifecycle management
+- Loyalty program with tier-based benefits
+- Admin-only flight management (add/cancel flights)
+- Comprehensive analytics dashboard
+
+---
+
+## Features
+
+### Customer Portal
+| Feature | Description |
+|---------|-------------|
+| **Flight Search** | Search flights by origin, destination, and date |
+| **Dynamic Pricing** | See real-time prices based on demand |
+| **Easy Booking** | Multi-passenger booking with class selection |
+| **Payment Processing** | Multiple payment methods (UPI, Card, Net Banking) |
+| **Reviews & Ratings** | Rate flights and read other reviews |
+| **Loyalty Program** | Earn and redeem points with tier benefits |
+| **Dashboard** | View upcoming flights, booking history, points |
+| **Profile Management** | Update personal information |
+
+### Admin Portal (Restricted Access)
+| Feature | Description |
+|---------|-------------|
+| **Flight Management** | Add new flights, cancel existing ones |
+| **Analytics Dashboard** | Revenue trends, route performance, booking stats |
+| **Dynamic Pricing Control** | Refresh prices, view pricing insights |
+| **Customer Analytics** | Loyalty tier distribution, top customers |
+| **Abandoned Carts** | Track incomplete bookings |
+
+> **Admin access is restricted to a single account:** `admin@flightsync.com`
+
+---
+
+## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        APPLICATION LAYER                         │
-│                     (Flask REST API + Python)                    │
+│                     FRONTEND (React + Vite)                      │
+│  ┌─────────────────────┐     ┌─────────────────────────────┐   │
+│  │   Customer Portal   │     │      Admin Dashboard        │   │
+│  │  - Flight Search    │     │  - Flight Management        │   │
+│  │  - Booking          │     │  - Analytics                │   │
+│  │  - Reviews          │     │  - Pricing Control          │   │
+│  │  - Loyalty          │     │  - Customer Insights        │   │
+│  └─────────────────────┘     └─────────────────────────────┘   │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │ REST API (JSON)
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      BACKEND (Flask)                             │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐    │
+│  │ Auth Service │ │Flight Service│ │ Booking Service      │    │
+│  └──────────────┘ └──────────────┘ └──────────────────────┘    │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐    │
+│  │Payment Svc   │ │Review Service│ │ Analytics Service    │    │
+│  └──────────────┘ └──────────────┘ └──────────────────────┘    │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │              Dynamic Pricing Engine                     │    │
+│  └────────────────────────────────────────────────────────┘    │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │ SQLAlchemy ORM
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    DATABASE (PostgreSQL)                         │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │
+│  │Customers│ │ Flights │ │Bookings │ │Payments │ │ Reviews │  │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘  │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                          │
+│  │Aircraft │ │ Prices  │ │Loyalty  │  + Views, Triggers,      │
+│  └─────────┘ └─────────┘ │Trans.   │    Stored Procedures     │
+│                          └─────────┘                          │
 └─────────────────────────────────────────────────────────────────┘
-                              │
-         ┌────────────────────┴────────────────────┐
-         ▼                                         ▼
-┌─────────────────────┐                 ┌─────────────────────┐
-│    PostgreSQL       │                 │      MongoDB        │
-│  (Transactional)    │ ◄── Sync ───►  │    (Analytics)      │
-├─────────────────────┤                 ├─────────────────────┤
-│ • Customers         │                 │ • Price History     │
-│ • Flights           │                 │ • Customer Behavior │
-│ • Bookings          │                 │ • Flight Reviews    │
-│ • Payments          │                 │ • AI Insights       │
-│ • Prices            │                 │ • Cached Data       │
-│ • Loyalty           │                 │                     │
-└─────────────────────┘                 └─────────────────────┘
 ```
-
-### Key Features
-
-1. **Dynamic Pricing Engine**
-   - Surge pricing based on seat occupancy
-   - Time-to-departure multipliers
-   - Seasonal and day-of-week factors
-   - Automatic price updates via triggers
-
-2. **Loyalty Program**
-   - Points earned on bookings (1 point per ₹100)
-   - Tier system: Bronze → Silver → Gold → Platinum
-   - Automatic tier upgrades
-
-3. **Real-time Sync**
-   - PostgreSQL triggers notify MongoDB sync service
-   - Price history tracking
-   - Customer behavior logging
-
-4. **Analytics & Insights**
-   - Revenue reports
-   - Route performance
-   - Abandoned cart tracking
-   - AI pricing recommendations
 
 ---
 
-## 🚀 Setup Instructions
+## Database Schema
+
+### Entity-Relationship Diagram
+
+```
+┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│   CUSTOMER   │       │   BOOKING    │       │    FLIGHT    │
+├──────────────┤       ├──────────────┤       ├──────────────┤
+│ cust_id (PK) │◄──┐   │booking_id(PK)│   ┌──►│flight_id (PK)│
+│ fname        │   │   │ cust_id (FK) │───┘   │ flight_code  │
+│ lname        │   └───│ flight_id(FK)│       │ origin       │
+│ email        │       │ seats_booked │       │ destination  │
+│ phone        │       │ total_cost   │       │ dep_time     │
+│ pass_hash    │       │ status       │       │ arr_time     │
+│ loyalty_pts  │       │ booking_class│       │ aircraft_no  │
+│ loyalty_tier │       └──────────────┘       │ status       │
+└──────────────┘              │               └──────────────┘
+       │                      │                      │
+       │                      ▼                      │
+       │               ┌──────────────┐              │
+       │               │   PAYMENT    │              │
+       │               ├──────────────┤              │
+       │               │payment_id(PK)│              │
+       └──────────────►│ booking_id   │              │
+                       │ cust_id (FK) │              │
+                       │ amount       │              │
+                       │ method       │              │
+                       │ status       │              │
+                       └──────────────┘              │
+                                                     │
+┌──────────────┐       ┌──────────────┐       ┌──────────────┐
+│    REVIEW    │       │    PRICE     │       │   AIRCRAFT   │
+├──────────────┤       ├──────────────┤       ├──────────────┤
+│review_id (PK)│       │price_id (PK) │       │aircraft_no   │
+│ flight_id    │───────│ flight_id    │◄──────│ (PK)         │
+│ cust_id      │       │ base_price   │       │ model        │
+│ rating       │       │ current_price│       │ manufacturer │
+│ comment      │       │ surge_mult   │       │ capacity     │
+└──────────────┘       └──────────────┘       └──────────────┘
+
+┌────────────────────┐
+│ LOYALTY_TRANSACTION│
+├────────────────────┤
+│ lt_id (PK)         │
+│ cust_id (FK)       │
+│ points             │
+│ transaction_type   │
+│ description        │
+└────────────────────┘
+```
+
+### Tables Summary
+
+| Table | Primary Key | Description |
+|-------|-------------|-------------|
+| `customers` | cust_id | User accounts with loyalty tracking |
+| `flights` | flight_id | Flight schedules and availability |
+| `bookings` | booking_id | Reservation records |
+| `payments` | payment_id | Payment transactions |
+| `reviews` | review_id | Customer feedback |
+| `prices` | price_id | Dynamic pricing data |
+| `aircraft` | aircraft_no | Fleet information |
+| `loyalty_transactions` | lt_id | Points history |
+
+### Key Database Objects
+
+**Views:**
+- `vw_flight_search` - Optimized flight search results
+- `vw_customer_booking_history` - Customer's booking history
+- `vw_flight_reviews_summary` - Aggregated review stats
+
+**Stored Procedures:**
+- `get_customer_dashboard()` - Dashboard statistics
+- `get_route_pricing()` - Route-based pricing
+- `process_booking()` - Atomic booking creation
+
+**Triggers:**
+- `trg_update_available_seats` - Auto-update seat count
+- `trg_award_loyalty_points` - Award points on booking
+- `trg_update_price_on_booking` - Trigger price recalculation
+
+---
+
+## Tech Stack
+
+### Backend
+| Technology | Purpose |
+|------------|---------|
+| Python 3.9+ | Backend language |
+| Flask | Web framework |
+| SQLAlchemy | ORM |
+| PyJWT | Authentication |
+| psycopg2 | PostgreSQL driver |
+| hashlib | Password hashing (SHA256) |
+
+### Frontend
+| Technology | Purpose |
+|------------|---------|
+| React 18 | UI library |
+| Vite | Build tool |
+| TailwindCSS | Styling |
+| React Router | Navigation |
+| Axios | HTTP client |
+| Recharts | Charts/graphs |
+| Lucide React | Icons |
+
+### Database
+| Technology | Purpose |
+|------------|---------|
+| PostgreSQL 15+ | Primary database |
+| MongoDB (optional) | Price history & analytics |
+
+---
+
+## Installation
 
 ### Prerequisites
 
-- PostgreSQL 14+
-- MongoDB 6.0+
-- Python 3.10+
-- pip (Python package manager)
+- **Node.js** 18+ ([Download](https://nodejs.org/))
+- **Python** 3.9+ ([Download](https://python.org/))
+- **PostgreSQL** 15+ ([Download](https://postgresql.org/))
+- **Git** ([Download](https://git-scm.com/))
 
-### 1. Database Setup
-
-#### PostgreSQL
+### Step 1: Clone the Repository
 
 ```bash
-# Create database
-createdb flightsync
-
-# Run SQL scripts in order
-psql -d flightsync -f sql/01_schema.sql
-psql -d flightsync -f sql/02_triggers.sql
-psql -d flightsync -f sql/03_views.sql
-psql -d flightsync -f sql/04_sample_data.sql
-psql -d flightsync -f sql/05_queries.sql
+git clone https://github.com/your-username/flightsync.git
+cd flightsync
 ```
 
-#### MongoDB
+### Step 2: Database Setup
 
+#### 2.1 Create Database
+
+**Using psql:**
 ```bash
-# Start MongoDB shell
-mongosh
+# macOS (Postgres.app)
+/Applications/Postgres.app/Contents/Versions/latest/bin/psql -U postgres
 
-# Switch to database
-use flightsync
+# Linux
+sudo -u postgres psql
 
-# Run schema script
-load("nosql/mongodb_schema.js")
+# Windows
+psql -U postgres
 ```
 
-### 2. Python Application Setup
+```sql
+CREATE DATABASE flightsync;
+\c flightsync
+```
+
+#### 2.2 Run Schema
+
+```sql
+\i sql/01_schema.sql
+\i sql/02_triggers.sql
+\i sql/03_views.sql
+\i sql/04_sample_data.sql
+```
+
+#### 2.3 Fix Password Hashes
+
+The sample data has placeholder passwords. Run this to fix them:
+
+```sql
+-- Set all customer passwords to 'password123'
+UPDATE customers 
+SET pass_hash = 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f';
+
+-- Add admin account (password: 'admin123')
+INSERT INTO customers (fname, lname, email, phone, pass_hash, loyalty_tier, loyalty_pts)
+VALUES (
+    'Admin', 
+    'FlightSync', 
+    'admin@flightsync.com', 
+    '9999999999', 
+    '240be518fabd2724ddb6f04eeb9d5b075b707a04fa73ea9fc8d297c1abad53a9', 
+    'Platinum', 
+    99999
+)
+ON CONFLICT (email) DO UPDATE 
+SET pass_hash = '240be518fabd2724ddb6f04eeb9d5b075b707a04fa73ea9fc8d297c1abad53a9';
+```
+
+### Step 3: Backend Setup
 
 ```bash
 cd python
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Activate virtual environment
+# macOS/Linux:
+source venv/bin/activate
+# Windows:
+venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
 
-# Configure environment
-cp ../.env.example .env
-# Edit .env with your database credentials
+### Step 4: Frontend Setup
 
-# Run the application
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+```
+
+---
+
+## Configuration
+
+### Backend Configuration
+
+Create/edit `python/.env`:
+
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=flightsync
+DB_USER=postgres
+DB_PASSWORD=your_password
+
+# JWT
+SECRET_KEY=your-super-secret-key-change-in-production
+
+# MongoDB (optional)
+MONGO_URI=mongodb://localhost:27017/flightsync
+```
+
+Or edit `python/config.py` directly:
+
+```python
+class Config:
+    DB_HOST = 'localhost'
+    DB_PORT = 5432
+    DB_NAME = 'flightsync'
+    DB_USER = 'postgres'
+    DB_PASSWORD = 'your_password'
+    SECRET_KEY = 'your-secret-key'
+```
+
+### Frontend Configuration
+
+Edit `frontend/vite.config.js` to match your backend port:
+
+```javascript
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5001',  // Your Flask port
+        changeOrigin: true
+      }
+    }
+  }
+})
+```
+
+---
+
+## Running the Application
+
+### Start Backend
+
+```bash
+cd python
+source venv/bin/activate  # macOS/Linux
 python app.py
 ```
 
-### 3. Start Sync Service (Optional)
+Backend runs at: `http://localhost:5001`
+
+### Start Frontend
 
 ```bash
-# In a separate terminal
-python sync_service.py
-
-# For initial bulk sync
-python sync_service.py --bulk
+cd frontend
+npm run dev
 ```
+
+Frontend runs at: `http://localhost:3000`
+
+### Demo Accounts
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Admin** | `admin@flightsync.com` | `admin123` |
+| Customer | `rahul.sharma@email.com` | `password123` |
+| Customer | `priya.patel@email.com` | `password123` |
+| Customer | Any registered user | `password123` |
+
+> **Note:** Only `admin@flightsync.com` can access admin features (Flight Management, etc.)
 
 ---
 
-## 📡 API Endpoints
+## API Documentation
 
 ### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new customer |
-| POST | `/api/auth/login` | Customer login |
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/auth/register` | Register new customer | ❌ |
+| POST | `/api/auth/login` | Login | ❌ |
+
+**Register Request:**
+```json
+{
+  "fname": "John",
+  "lname": "Doe",
+  "email": "john@example.com",
+  "phone": "9876543210",
+  "password": "securepassword",
+  "dob": "1990-01-15"
+}
+```
+
+**Login Request:**
+```json
+{
+  "email": "john@example.com",
+  "password": "securepassword"
+}
+```
+
+**Login Response:**
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "customer": {
+    "cust_id": 1,
+    "fname": "John",
+    "lname": "Doe",
+    "email": "john@example.com",
+    "loyalty_tier": "Bronze",
+    "loyalty_pts": 0
+  }
+}
+```
 
 ### Flights
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET/POST | `/api/flights/search` | Search available flights |
-| GET | `/api/flights/{id}` | Get flight details |
-| GET | `/api/flights/{id}/price-history` | Get price history |
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/flights/search` | Search flights | ❌ |
+| GET | `/api/flights/{id}` | Get flight details | ❌ |
+| GET | `/api/flights/{id}/price-history` | Price history | ❌ |
+| GET | `/api/flights/{id}/reviews` | Flight reviews | ❌ |
+
+**Search Request:**
+```json
+{
+  "origin": "Bengaluru (BLR)",
+  "destination": "Mumbai (BOM)",
+  "travel_date": "2025-01-15",
+  "passengers": 2
+}
+```
 
 ### Bookings
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/bookings` | Create booking |
-| GET | `/api/bookings/{id}` | Get booking details |
-| GET | `/api/bookings/upcoming` | Get upcoming bookings |
-| POST | `/api/bookings/{id}/cancel` | Cancel booking |
 
-### Payments
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/payments` | Process payment |
-| GET | `/api/payments/{id}` | Get payment details |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/bookings` | Create booking | ✅ |
+| GET | `/api/bookings/{id}` | Get booking details | ✅ |
+| POST | `/api/bookings/{id}/cancel` | Cancel booking | ✅ |
+| GET | `/api/customers/me/bookings` | My bookings | ✅ |
 
-### Reviews
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/reviews` | Submit review |
-| GET | `/api/flights/{id}/reviews` | Get flight reviews |
-
-### Admin/Analytics
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/admin/pricing/refresh/{id}` | Refresh flight price |
-| POST | `/api/admin/pricing/refresh-all` | Refresh all prices |
-| GET | `/api/admin/pricing/insights/{id}` | Get AI pricing insights |
-| GET | `/api/admin/analytics/revenue` | Revenue report |
-| GET | `/api/admin/analytics/routes` | Top routes |
-
----
-
-## 🔧 Dynamic Pricing Algorithm
-
-The pricing engine uses multiple factors to calculate surge multipliers:
-
-```
-Final Price = Base Price × Surge Multiplier
-
-Surge Multiplier = weighted_average(
-    0.40 × Occupancy Factor,
-    0.30 × Days-to-Departure Factor,
-    0.10 × Time-of-Day Factor,
-    0.10 × Day-of-Week Factor,
-    0.10 × Seasonal Factor
-)
+**Create Booking Request:**
+```json
+{
+  "flight_id": 1,
+  "passengers": [
+    {"name": "John Doe", "age": 30, "seat_pref": "WINDOW"},
+    {"name": "Jane Doe", "age": 28, "seat_pref": "AISLE"}
+  ],
+  "booking_class": "ECONOMY",
+  "payment_method": "CREDIT_CARD"
+}
 ```
 
-### Occupancy Thresholds
-| Occupancy | Multiplier |
-|-----------|------------|
-| < 30% | 0.85 (discount) |
-| 30-50% | 1.00 (normal) |
-| 50-70% | 1.25 |
-| 70-85% | 1.50 |
-| 85-95% | 2.00 |
-| > 95% | 2.50 (premium) |
+### Admin Endpoints (Admin Only)
 
----
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/admin/flights` | Get all flights | 🔒 Admin |
+| POST | `/api/admin/flights` | Add new flight | 🔒 Admin |
+| POST | `/api/admin/flights/{id}/cancel` | Cancel flight | 🔒 Admin |
+| POST | `/api/admin/pricing/refresh/{id}` | Refresh price | 🔒 Admin |
+| GET | `/api/admin/analytics/revenue` | Revenue analytics | 🔒 Admin |
+| GET | `/api/admin/analytics/routes` | Route analytics | 🔒 Admin |
+| GET | `/api/admin/analytics/loyalty` | Loyalty analytics | 🔒 Admin |
 
-## 📊 Sample Queries
-
-### Search Flights
-```sql
-SELECT * FROM search_flights('Bengaluru', 'Mumbai', '2025-01-15', 2);
+**Add Flight Request:**
+```json
+{
+  "flight_code": "FS999",
+  "origin": "Bengaluru (BLR)",
+  "destination": "Chennai (MAA)",
+  "dep_time": "2025-02-01T10:00:00",
+  "arr_time": "2025-02-01T11:30:00",
+  "base_price": 4500,
+  "total_seats": 180,
+  "aircraft_no": "VT-ANA"
+}
 ```
 
-### Create Booking
-```sql
-SELECT * FROM create_booking(1, 1, 2, 'ECONOMY');
-```
-
-### Get Revenue Report
-```sql
-SELECT * FROM get_revenue_report('2025-01-01', '2025-01-31');
-```
-
-### Get Price Trends (MongoDB)
-```javascript
-db.price_history.aggregate([
-  { $match: { flight_id: 1 } },
-  { $unwind: "$price_snapshots" },
-  { $sort: { "price_snapshots.timestamp": -1 } },
-  { $limit: 10 }
-])
+**Cancel Flight Request:**
+```json
+{
+  "reason": "Weather conditions"
+}
 ```
 
 ---
 
-## 🔐 Security Features
+## Dynamic Pricing Algorithm
 
-- Password hashing (SHA-256)
-- JWT-based authentication
-- Input validation with Pydantic
-- SQL injection prevention via parameterized queries
-- CORS configuration
+The pricing engine calculates prices based on multiple factors:
+
+### Occupancy-Based Surge Multiplier
+
+| Occupancy | Multiplier | Price Effect |
+|-----------|------------|--------------|
+| < 30% | 0.85x | 15% Discount |
+| 30-50% | 1.00x | Base Price |
+| 50-70% | 1.25x | 25% Premium |
+| 70-85% | 1.50x | 50% Premium |
+| > 85% | 2.00x+ | 100%+ Premium |
+
+### Price Calculation Formula
+
+```
+Current Price = Base Price × Surge Multiplier × Time Factor × Demand Factor
+```
+
+**Factors:**
+- **Occupancy Rate:** Primary driver of price changes
+- **Time to Departure:** Prices increase as departure approaches
+- **Day of Week:** Weekend/holiday premiums
+- **Route Demand:** Popular routes have higher base prices
+- **Booking Velocity:** Rapid bookings trigger price increases
+
+### Price Bounds
+
+Each flight has `min_price` and `max_price` to prevent extreme pricing:
+- Minimum: ~70-80% of base price
+- Maximum: 2-4x base price
 
 ---
 
-## 📈 Future Enhancements
+## Loyalty Program
 
-- [ ] Machine Learning for demand prediction
-- [ ] Real-time competitor price monitoring
-- [ ] Mobile application
-- [ ] Email/SMS notifications
-- [ ] Advanced analytics dashboard
-- [ ] Multi-currency support
+### Tier Structure
+
+| Tier | Points Required | Benefits |
+|------|-----------------|----------|
+| Bronze | 0 | 1 point per ₹100 spent |
+| Silver | 2,000 | 1.25x points multiplier |
+| Gold | 5,000 | 1.5x points, priority booking |
+| Platinum | 10,000 | 2x points, free upgrades |
+
+### Earning Points
+
+- **Flight Booking:** 1 point per ₹100 spent
+- **Tier Multiplier:** Applied based on current tier
+- **Bonus Points:** Welcome bonus, birthday bonus, promotions
+
+### Redeeming Points
+
+- **Discount on Booking:** 100 points = ₹100 off
+- **Seat Upgrades:** Redeem for premium seats
+- **Priority Services:** Lounge access, priority boarding
 
 ---
 
-## 📚 References
+### Customer Portal
 
-1. Talluri, K. T., & Van Ryzin, G. J. (2004). *The Theory and Practice of Revenue Management*. Springer.
-2. Boden, M., & Zdonik, S. (2020). Polyglot persistence: Choosing the right database for the right job.
-3. Dynamic airline pricing research using MDP approach.
+**Home Page**
+- Hero section with quick flight search
+- Featured routes and offers
+
+**Flight Search Results**
+- Dynamic pricing badges (High Demand, Great Deal)
+- Filters and sorting options
+
+**Booking Flow**
+- Passenger details form
+- Payment method selection
+- Confirmation page
+
+**Dashboard**
+- Upcoming flights
+- Recent bookings
+- Loyalty points summary
+
+### Admin Portal
+
+**Flight Management**
+- Add new flights modal
+- Cancel flights with reason
+- Status filters
+
+**Analytics Dashboard**
+- Revenue trend charts
+- Booking vs Cancellation graphs
+- Payment method distribution
+- Route performance table
 
 ---
 
-## 📄 License
+## Project Structure
 
-This project is developed for academic purposes as part of the DBMS course at RV College of Engineering.
+```
+flightsync/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Navbar.jsx
+│   │   │   └── Sidebar.jsx
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx
+│   │   ├── pages/
+│   │   │   ├── Home.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   ├── FlightSearch.jsx
+│   │   │   ├── FlightDetails.jsx
+│   │   │   ├── customer/
+│   │   │   │   ├── Dashboard.jsx
+│   │   │   │   ├── MyBookings.jsx
+│   │   │   │   ├── BookingDetails.jsx
+│   │   │   │   ├── Loyalty.jsx
+│   │   │   │   └── Profile.jsx
+│   │   │   └── admin/
+│   │   │       ├── AdminDashboard.jsx
+│   │   │       ├── FlightManagement.jsx
+│   │   │       ├── PricingManagement.jsx
+│   │   │       ├── Analytics.jsx
+│   │   │       └── CustomerManagement.jsx
+│   │   ├── services/
+│   │   │   └── api.js
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   └── index.css
+│   ├── package.json
+│   ├── vite.config.js
+│   └── tailwind.config.js
+├── python/
+│   ├── app.py              # Main Flask application
+│   ├── models.py           # Pydantic models
+│   ├── services.py         # Business logic
+│   ├── config.py           # Configuration
+│   ├── pricing_engine.py   # Dynamic pricing
+│   ├── sync_service.py     # MongoDB sync
+│   └── requirements.txt
+├── sql/
+│   ├── 01_schema.sql       # Table definitions
+│   ├── 02_triggers.sql     # Database triggers
+│   ├── 03_views.sql        # Views
+│   ├── 04_sample_data.sql  # Test data
+│   └── 05_queries.sql      # Sample queries
+├── nosql/
+│   └── mongodb_schema.js   # MongoDB collections
+├── .env.example
+└── README.md
+```
 
 ---
 
-**Made with ❤️ by Team FlightSync**
+## Testing
+
+### Test Customer Flow
+
+1. Register a new account or login with demo credentials
+2. Search for flights (e.g., Bengaluru → Mumbai)
+3. Select a flight and view details
+4. Complete booking with payment
+5. View booking in "My Bookings"
+6. Write a review for completed flights
+7. Check loyalty points in dashboard
+
+### Test Admin Flow
+
+1. Login with `admin@flightsync.com` / `admin123`
+2. Navigate to Admin Dashboard
+3. View analytics and revenue charts
+4. Go to Flight Management
+5. Add a new flight
+6. Cancel an existing flight (observe auto-refund)
+7. Refresh dynamic pricing
+
+---
+
+## Deployment
+
+### Production Build
+
+**Frontend:**
+```bash
+cd frontend
+npm run build
+# Output in dist/ folder
+```
+
+**Backend:**
+```bash
+cd python
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:5001 app:app
+```
+
+### Environment Variables (Production)
+
+```env
+FLASK_ENV=production
+SECRET_KEY=<strong-random-key>
+DB_PASSWORD=<secure-password>
+```
+
+---
