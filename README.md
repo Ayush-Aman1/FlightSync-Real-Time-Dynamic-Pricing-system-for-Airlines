@@ -16,6 +16,7 @@ A comprehensive full-stack web application for airline ticket booking with dynam
 - [API Documentation](#-api-documentation)
 - [Dynamic Pricing Algorithm](#-dynamic-pricing-algorithm)
 - [Loyalty Program](#-loyalty-program)
+- [Screenshots](#-screenshots)
 
 ---
 
@@ -729,3 +730,20 @@ DB_PASSWORD=<secure-password>
 ```
 
 ---
+### Screenshots
+<img width="1280" height="834" alt="image" src="https://github.com/user-attachments/assets/ea010605-9259-4bfa-a19c-26d26be0a798" />
+<img width="1280" height="745" alt="image" src="https://github.com/user-attachments/assets/16ffcfa1-de6e-4a0a-960e-9865f8796358" />
+<img width="1280" height="850" alt="image" src="https://github.com/user-attachments/assets/7ba07129-8095-4f16-97b3-f9490a985ad1" />
+<img width="1280" height="858" alt="image" src="https://github.com/user-attachments/assets/a49eaf36-0035-40bd-989a-6cb1c8697fe5" />
+<img width="1280" height="858" alt="image" src="https://github.com/user-attachments/assets/5b7f8578-86c2-48a0-9ab9-411883c9ec40" />
+<img width="1280" height="829" alt="image" src="https://github.com/user-attachments/assets/4ebc06ca-d727-4fdd-9466-e5888ea63485" />
+<img width="1280" height="849" alt="image" src="https://github.com/user-attachments/assets/2d2c984f-f612-4615-b55c-dfddf4a4d53c" />
+<img width="1280" height="868" alt="image" src="https://github.com/user-attachments/assets/ad73792a-dbf8-4e64-b797-f6cfe9b8b5a4" />
+
+
+
+
+
+
+
+
