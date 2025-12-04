@@ -2,17 +2,13 @@ import psycopg2
 import os
 from config import config
 
-# 1. Define the order of SQL files
 SQL_FILES = [
     '/Users/admin/Downloads/flightsync/sql/01_schema.sql',
     '/Users/admin/Downloads/flightsync/sql/02_triggers.sql',
     '/Users/admin/Downloads/flightsync/sql/03_views.sql',
-    '/Users/admin/Downloads/flightsync/sql/05_queries.sql',  # This file must contain the ::VARCHAR fix!
+    '/Users/admin/Downloads/flightsync/sql/05_queries.sql',
     '/Users/admin/Downloads/flightsync/sql/04_sample_data.sql'
 ]
-
-# Note: Adjust the path '../' above if your SQL files are in a specific 'sql' folder 
-# (e.g., '../sql/01_schema.sql')
 
 def get_db_connection(db_name='postgres'):
     conn = psycopg2.connect(
@@ -28,9 +24,7 @@ def get_db_connection(db_name='postgres'):
 def reset_database():
     print("⚠️  Starting Database Factory Reset...")
     
-    # Step 1: Drop and Recreate Database
     try:
-        # Connect to 'postgres' (default system DB) to perform administrative tasks
         conn = get_db_connection('postgres')
         cur = conn.cursor()
         
@@ -46,17 +40,13 @@ def reset_database():
         print(f"❌ Error resetting database: {e}")
         return
 
-    # Step 2: Run SQL Files
     print("   Applying SQL scripts...")
     try:
-        # Connect to the new 'flightsync' database
         conn = get_db_connection('flightsync')
         cur = conn.cursor()
         
         for file_path in SQL_FILES:
-            # Check if file exists
             if not os.path.exists(file_path):
-                # Try looking in current directory if ../ fails
                 alt_path = file_path.replace('../', '')
                 if os.path.exists(alt_path):
                     file_path = alt_path

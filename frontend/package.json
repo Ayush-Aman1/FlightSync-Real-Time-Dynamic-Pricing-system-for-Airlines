@@ -1,7 +1,7 @@
 {
   "name": "flightsync-frontend",
   "version": "1.0.0",
-  "description": "FlightSync - Airline Dynamic Pricing System Frontend",
+  "description": "FlightSync Frontend",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",

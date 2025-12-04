@@ -2,32 +2,27 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Layout Components
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 
-// Public Pages
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import FlightSearch from './pages/FlightSearch';
 import FlightDetails from './pages/FlightDetails';
 
-// Customer Pages
 import Dashboard from './pages/customer/Dashboard';
 import MyBookings from './pages/customer/MyBookings';
 import BookingDetails from './pages/customer/BookingDetails';
 import Loyalty from './pages/customer/Loyalty';
 import Profile from './pages/customer/Profile';
 
-// Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 import FlightManagement from './pages/admin/FlightManagement';
 import PricingManagement from './pages/admin/PricingManagement';
 import Analytics from './pages/admin/Analytics';
 import CustomerManagement from './pages/admin/CustomerManagement';
 
-// Protected Route Component
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
@@ -50,7 +45,6 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children;
 };
 
-// Layout with Sidebar for authenticated pages
 const AuthenticatedLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -65,7 +59,6 @@ const AuthenticatedLayout = ({ children }) => {
   );
 };
 
-// Public Layout
 const PublicLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -82,7 +75,6 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public Routes */}
       <Route path="/" element={
         <PublicLayout><Home /></PublicLayout>
       } />
@@ -99,7 +91,6 @@ function AppRoutes() {
         <PublicLayout><FlightDetails /></PublicLayout>
       } />
 
-      {/* Customer Routes */}
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <AuthenticatedLayout>
@@ -128,7 +119,6 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Admin Routes */}
       <Route path="/admin" element={
         <ProtectedRoute adminOnly>
           <AuthenticatedLayout><AdminDashboard /></AuthenticatedLayout>
@@ -155,7 +145,6 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Catch all */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

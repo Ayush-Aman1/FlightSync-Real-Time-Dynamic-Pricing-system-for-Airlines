@@ -39,7 +39,6 @@ const Sidebar = () => {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-gray-900 text-white">
       <div className="flex flex-col h-full">
-        {/* Logo */}
         <div className="flex items-center justify-center h-16 border-b border-gray-800">
           <Link to="/" className="flex items-center space-x-2">
             <div className="bg-primary-600 p-2 rounded-lg">
@@ -49,14 +48,12 @@ const Sidebar = () => {
           </Link>
         </div>
 
-        {/* User Type Badge */}
         <div className="px-4 py-3">
           <span className={`badge ${isAdmin ? 'bg-purple-600' : 'bg-primary-600'} text-white px-3 py-1`}>
             {isAdmin ? '👑 Admin Panel' : '✈️ Customer Portal'}
           </span>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {links.map((link) => {
             const isActive = location.pathname === link.to;
@@ -77,7 +74,6 @@ const Sidebar = () => {
           })}
         </nav>
 
-        {/* Footer */}
         <div className="p-4 border-t border-gray-800">
           <div className="flex items-center space-x-3 text-gray-400">
             <TrendingUp className="h-5 w-5" />

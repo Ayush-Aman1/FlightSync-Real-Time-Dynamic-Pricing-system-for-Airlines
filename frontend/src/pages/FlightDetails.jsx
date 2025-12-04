@@ -84,7 +84,6 @@ const FlightDetails = () => {
     }
   };
 
-  // --- REPLACE THESE FUNCTIONS ---
 
   const getClassMultiplier = (cls) =>
     ({ ECONOMY: 1, PREMIUM_ECONOMY: 1.5, BUSINESS: 2.5, FIRST: 4 }[cls] || 1);
@@ -96,7 +95,6 @@ const FlightDetails = () => {
         getClassMultiplier(bookingData.booking_class)
       : 0;
 
-  // SAFE DATE FORMATTERS
   const formatTime = (dateStr) => {
     if (!dateStr) return "--:--";
     try {
@@ -350,7 +348,6 @@ const FlightDetails = () => {
                   <div className="flex items-center space-x-2">
                     <Star className="h-5 w-5 text-yellow-400 fill-current" />
                     <span className="font-semibold">
-                      {/* SAFE FIX: Convert to Number() first */}
                       {reviews.summary.avg_rating
                         ? Number(reviews.summary.avg_rating).toFixed(1)
                         : "N/A"}

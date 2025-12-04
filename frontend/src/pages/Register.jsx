@@ -57,7 +57,6 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-600 to-primary-900 py-12 px-4">
       <div className="max-w-lg w-full">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
             <Plane className="h-8 w-8 text-primary-600" />
@@ -66,7 +65,6 @@ const Register = () => {
           <p className="text-primary-200 mt-2">Join FlightSync and start booking smarter</p>
         </div>
 
-        {/* Register Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
@@ -76,7 +74,6 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-gray-700 text-sm font-medium mb-2">First Name</label>
@@ -107,7 +104,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">Email Address</label>
               <div className="relative">
@@ -124,7 +120,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Phone */}
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">Phone Number</label>
               <div className="relative">
@@ -140,7 +135,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* DOB */}
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">Date of Birth</label>
               <div className="relative">
@@ -155,7 +149,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Password Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-gray-700 text-sm font-medium mb-2">Password</label>
@@ -186,7 +179,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Password Requirements */}
             <div className="text-sm text-gray-500 space-y-1">
               <div className="flex items-center space-x-2">
                 <CheckCircle className={`h-4 w-4 ${formData.password.length >= 8 ? 'text-green-500' : 'text-gray-300'}`} />

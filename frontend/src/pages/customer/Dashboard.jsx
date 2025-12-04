@@ -64,7 +64,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -78,9 +77,7 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Loyalty Card */}
         <div className={`rounded-xl p-6 text-white bg-gradient-to-br ${getTierColor(dashboard?.loyalty_tier)}`}>
           <div className="flex items-center justify-between mb-4">
             <Gift className="h-8 w-8 opacity-80" />
@@ -90,7 +87,6 @@ const Dashboard = () => {
           <p className="text-sm opacity-80">Loyalty Points</p>
         </div>
 
-        {/* Total Bookings */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="bg-blue-100 p-3 rounded-lg">
@@ -102,7 +98,6 @@ const Dashboard = () => {
           <p className="text-sm text-gray-600">Bookings Made</p>
         </div>
 
-        {/* Upcoming Flights */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="bg-green-100 p-3 rounded-lg">
@@ -114,7 +109,6 @@ const Dashboard = () => {
           <p className="text-sm text-gray-600">Scheduled Flights</p>
         </div>
 
-        {/* Total Spent */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="bg-purple-100 p-3 rounded-lg">
@@ -127,7 +121,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Upcoming Bookings */}
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-gray-900">Upcoming Flights</h2>
@@ -180,7 +173,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link to="/search" className="card-hover flex items-center space-x-4">
           <div className="bg-primary-100 p-3 rounded-lg">

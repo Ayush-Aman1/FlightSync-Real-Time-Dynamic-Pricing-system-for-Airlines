@@ -1,7 +1,3 @@
-"""
-FlightSync - Flask REST API
-Main application entry point with all API endpoints
-"""
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -21,12 +17,10 @@ from models import (
 )
 from pricing_engine import DynamicPricingEngine, PricingRecommendationEngine
 
-# Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = config.secret_key
 CORS(app)
 
-# Initialize services
 customer_service = CustomerService()
 flight_service = FlightService()
 booking_service = BookingService()
@@ -42,7 +36,6 @@ recommendation_engine = PricingRecommendationEngine()
 # ============================================================================
 
 def token_required(f):
-    """JWT token verification decorator"""
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization')
@@ -64,12 +57,10 @@ def token_required(f):
     return decorated
 
 
-# Admin email - only this account can access admin features
 ADMIN_EMAIL = 'admin@flightsync.com'
 
 
 def admin_required(f):
-    """Admin-only access decorator - requires specific admin account"""
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization')
@@ -83,8 +74,7 @@ def admin_required(f):
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
             current_user = data['cust_id']
             
-            # Verify this is the admin account
-            customer = customer_service.get_by_id(current_user)
+            customer = customer_service.get_customer(current_user)
             if not customer or customer.get('email') != ADMIN_EMAIL:
                 return jsonify({'error': 'Admin access required. Only the admin account can access this feature.'}), 403
                 
@@ -98,7 +88,6 @@ def admin_required(f):
 
 
 def generate_token(cust_id: int) -> str:
-    """Generate JWT token for customer"""
     import datetime as dt
     payload = {
         'cust_id': cust_id,
@@ -113,7 +102,6 @@ def generate_token(cust_id: int) -> str:
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
         'service': 'FlightSync API',
@@ -128,7 +116,6 @@ def health_check():
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    """Register a new customer"""
     try:
         data = request.get_json()
         customer_data = CustomerCreate(**data)
@@ -146,7 +133,6 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    """Customer login"""
     try:
         data = request.get_json()
         email = data.get('email')
@@ -174,7 +160,6 @@ def login():
 @app.route('/api/customers/me', methods=['GET'])
 @token_required
 def get_current_customer(cust_id):
-    """Get current customer profile"""
     customer = customer_service.get_customer(cust_id)
     if customer:
         return jsonify(customer)
@@ -184,7 +169,6 @@ def get_current_customer(cust_id):
 @app.route('/api/customers/me', methods=['PUT'])
 @token_required
 def update_customer(cust_id):
-    """Update customer profile"""
     try:
         data = request.get_json()
         update_data = CustomerUpdate(**data)
@@ -197,7 +181,6 @@ def update_customer(cust_id):
 @app.route('/api/customers/me/dashboard', methods=['GET'])
 @token_required
 def get_dashboard(cust_id):
-    """Get customer dashboard"""
     dashboard = customer_service.get_dashboard(cust_id)
     return jsonify(dashboard.model_dump())
 
@@ -205,7 +188,6 @@ def get_dashboard(cust_id):
 @app.route('/api/customers/me/bookings', methods=['GET'])
 @token_required
 def get_booking_history(cust_id):
-    """Get customer booking history"""
     bookings = customer_service.get_booking_history(cust_id)
     return jsonify(bookings)
 
@@ -213,7 +195,6 @@ def get_booking_history(cust_id):
 @app.route('/api/customers/me/loyalty', methods=['GET'])
 @token_required
 def get_loyalty_history(cust_id):
-    """Get loyalty points history"""
     limit = request.args.get('limit', 20, type=int)
     history = customer_service.get_loyalty_history(cust_id, limit)
     return jsonify(history)
@@ -222,7 +203,6 @@ def get_loyalty_history(cust_id):
 @app.route('/api/customers/me/loyalty/redeem', methods=['POST'])
 @token_required
 def redeem_loyalty_points(cust_id):
-    """Redeem loyalty points"""
     try:
         data = request.get_json()
         points = data.get('points')
@@ -239,7 +219,6 @@ def redeem_loyalty_points(cust_id):
 
 @app.route('/api/flights/search', methods=['GET', 'POST'])
 def search_flights():
-    """Search for available flights"""
     try:
         if request.method == 'POST':
             data = request.get_json()
@@ -251,7 +230,6 @@ def search_flights():
                 'passengers': request.args.get('passengers', 1, type=int)
             }
         
-        # Parse date
         if isinstance(data.get('travel_date'), str):
             data['travel_date'] = datetime.strptime(data['travel_date'], '%Y-%m-%d').date()
         
@@ -268,7 +246,6 @@ def search_flights():
 
 @app.route('/api/flights/<int:flight_id>', methods=['GET'])
 def get_flight(flight_id):
-    """Get flight details"""
     flight = flight_service.get_flight_details(flight_id)
     if flight:
         return jsonify(flight)
@@ -277,7 +254,6 @@ def get_flight(flight_id):
 
 @app.route('/api/flights/<int:flight_id>/price-history', methods=['GET'])
 def get_flight_price_history(flight_id):
-    """Get price history for a flight"""
     days = request.args.get('days', 7, type=int)
     history = flight_service.get_price_history(flight_id, days)
     return jsonify(history)
@@ -285,7 +261,6 @@ def get_flight_price_history(flight_id):
 
 @app.route('/api/flights/routes/<path:route>/pricing', methods=['GET'])
 def get_route_pricing(route):
-    """Get pricing for a route (format: origin-destination)"""
     parts = route.split('-')
     if len(parts) < 2:
         return jsonify({'error': 'Invalid route format. Use: origin-destination'}), 400
@@ -303,11 +278,9 @@ def get_route_pricing(route):
 @app.route('/api/bookings', methods=['POST'])
 @token_required
 def create_booking(cust_id):
-    """Create a new booking"""
     try:
         data = request.get_json()
         
-        # Convert booking_class string to enum if present
         if 'booking_class' in data and isinstance(data['booking_class'], str):
             data['booking_class'] = BookingClass(data['booking_class'])
         
@@ -327,7 +300,6 @@ def create_booking(cust_id):
 @app.route('/api/bookings/<int:booking_id>', methods=['GET'])
 @token_required
 def get_booking(cust_id, booking_id):
-    """Get booking details"""
     booking = booking_service.get_booking(booking_id)
     
     if not booking:
@@ -342,7 +314,6 @@ def get_booking(cust_id, booking_id):
 @app.route('/api/bookings/upcoming', methods=['GET'])
 @token_required
 def get_upcoming_bookings(cust_id):
-    """Get upcoming bookings"""
     bookings = booking_service.get_upcoming_bookings(cust_id)
     return jsonify(bookings)
 
@@ -350,9 +321,7 @@ def get_upcoming_bookings(cust_id):
 @app.route('/api/bookings/<int:booking_id>/cancel', methods=['POST'])
 @token_required
 def cancel_booking(cust_id, booking_id):
-    """Cancel a booking"""
     try:
-        # Verify ownership
         booking = booking_service.get_booking(booking_id)
         if not booking or booking['cust_id'] != cust_id:
             return jsonify({'error': 'Booking not found or unauthorized'}), 404
@@ -373,11 +342,9 @@ def cancel_booking(cust_id, booking_id):
 @app.route('/api/payments', methods=['POST'])
 @token_required
 def process_payment(cust_id):
-    """Process a payment"""
     try:
         data = request.get_json()
         
-        # Convert payment_method string to enum
         if 'payment_method' in data and isinstance(data['payment_method'], str):
             data['payment_method'] = PaymentMethod(data['payment_method'])
         
@@ -395,7 +362,6 @@ def process_payment(cust_id):
 @app.route('/api/payments/<int:payment_id>', methods=['GET'])
 @token_required
 def get_payment(cust_id, payment_id):
-    """Get payment details"""
     payment = payment_service.get_payment(payment_id)
     
     if not payment:
@@ -414,7 +380,6 @@ def get_payment(cust_id, payment_id):
 @app.route('/api/reviews', methods=['POST'])
 @token_required
 def submit_review(cust_id):
-    """Submit a flight review"""
     try:
         data = request.get_json()
         review_data = ReviewCreate(**data)
@@ -426,7 +391,6 @@ def submit_review(cust_id):
 
 @app.route('/api/flights/<int:flight_id>/reviews', methods=['GET'])
 def get_flight_reviews(flight_id):
-    """Get reviews for a flight"""
     reviews = review_service.get_flight_reviews(flight_id)
     summary = review_service.get_reviews_summary(flight_id)
     
@@ -438,7 +402,6 @@ def get_flight_reviews(flight_id):
 
 @app.route('/api/reviews/<int:review_id>/helpful', methods=['POST'])
 def mark_review_helpful(review_id):
-    """Mark a review as helpful"""
     result = review_service.mark_helpful(review_id)
     if result:
         return jsonify({'message': 'Marked as helpful'})
@@ -452,7 +415,6 @@ def mark_review_helpful(review_id):
 @app.route('/api/admin/flights', methods=['GET'])
 @admin_required
 def admin_get_all_flights(current_user):
-    """Get all flights for admin management"""
     try:
         flights = flight_service.get_all_flights()
         return jsonify(flights)
@@ -463,11 +425,9 @@ def admin_get_all_flights(current_user):
 @app.route('/api/admin/flights', methods=['POST'])
 @admin_required
 def admin_add_flight(current_user):
-    """Add a new flight (Admin only)"""
     try:
         data = request.get_json()
         
-        # Validate required fields
         required = ['flight_code', 'origin', 'destination', 'dep_time', 'arr_time', 'base_price', 'total_seats']
         for field in required:
             if not data.get(field):
@@ -479,7 +439,7 @@ def admin_add_flight(current_user):
             destination=data['destination'],
             dep_time=data['dep_time'],
             arr_time=data['arr_time'],
-            aircraft_no=data.get('aircraft_no'),
+            aircraft_id=data.get('aircraft_id'),
             base_price=float(data['base_price']),
             total_seats=int(data['total_seats'])
         )
@@ -492,7 +452,6 @@ def admin_add_flight(current_user):
 @app.route('/api/admin/flights/<int:flight_id>/cancel', methods=['POST'])
 @admin_required
 def admin_cancel_flight(current_user, flight_id):
-    """Cancel a flight and refund all bookings (Admin only)"""
     try:
         data = request.get_json()
         reason = data.get('reason', 'Administrative cancellation')
@@ -507,7 +466,6 @@ def admin_cancel_flight(current_user, flight_id):
 @app.route('/api/admin/flights/<int:flight_id>', methods=['PUT'])
 @admin_required
 def admin_update_flight(current_user, flight_id):
-    """Update flight details (Admin only)"""
     try:
         data = request.get_json()
         result = flight_service.update_flight(flight_id, data)
@@ -522,7 +480,6 @@ def admin_update_flight(current_user, flight_id):
 
 @app.route('/api/admin/pricing/refresh/<int:flight_id>', methods=['POST'])
 def refresh_flight_price(flight_id):
-    """Manually refresh price for a flight"""
     try:
         result = pricing_engine.update_flight_price(flight_id)
         return jsonify(result)
@@ -532,7 +489,6 @@ def refresh_flight_price(flight_id):
 
 @app.route('/api/admin/pricing/refresh-all', methods=['POST'])
 def refresh_all_prices():
-    """Refresh prices for all scheduled flights"""
     try:
         results = pricing_engine.batch_update_prices()
         return jsonify({
@@ -546,10 +502,8 @@ def refresh_all_prices():
 
 @app.route('/api/admin/pricing/insights/<int:flight_id>', methods=['GET'])
 def get_pricing_insights(flight_id):
-    """Get AI pricing insights for a flight"""
     try:
         insights = recommendation_engine.generate_insights(flight_id)
-        # Convert datetime objects to strings for JSON serialization
         insights['generated_at'] = insights['generated_at'].isoformat()
         insights['expires_at'] = insights['expires_at'].isoformat()
         return jsonify(insights)
@@ -563,7 +517,6 @@ def get_pricing_insights(flight_id):
 
 @app.route('/api/admin/analytics/revenue', methods=['GET'])
 def get_revenue_analytics():
-    """Get revenue report"""
     start = request.args.get('start', (date.today() - timedelta(days=30)).isoformat())
     end = request.args.get('end', date.today().isoformat())
     
@@ -576,7 +529,6 @@ def get_revenue_analytics():
 
 @app.route('/api/admin/analytics/routes', methods=['GET'])
 def get_route_analytics():
-    """Get route performance analytics"""
     limit = request.args.get('limit', 10, type=int)
     routes = analytics_service.get_top_routes(limit)
     return jsonify(routes)
@@ -584,21 +536,18 @@ def get_route_analytics():
 
 @app.route('/api/admin/analytics/routes/performance', methods=['GET'])
 def get_routes_performance():
-    """Get all routes performance"""
     performance = analytics_service.get_route_performance()
     return jsonify(performance)
 
 
 @app.route('/api/admin/analytics/loyalty', methods=['GET'])
 def get_loyalty_analytics():
-    """Get loyalty program analytics"""
     analytics = analytics_service.get_loyalty_analytics()
     return jsonify(analytics)
 
 
 @app.route('/api/admin/analytics/payments', methods=['GET'])
 def get_payment_analytics():
-    """Get payment summary"""
     days = request.args.get('days', 30, type=int)
     summary = analytics_service.get_payment_summary(days)
     return jsonify(summary)
@@ -606,7 +555,6 @@ def get_payment_analytics():
 
 @app.route('/api/admin/analytics/abandoned-carts', methods=['GET'])
 def get_abandoned_carts():
-    """Get abandoned cart data"""
     hours = request.args.get('hours', 24, type=int)
     carts = analytics_service.get_abandoned_carts(hours)
     return jsonify(carts)
@@ -614,7 +562,6 @@ def get_abandoned_carts():
 
 @app.route('/api/admin/analytics/price-trends', methods=['GET'])
 def get_price_trends():
-    """Get price trends"""
     route = request.args.get('route')
     days = request.args.get('days', 30, type=int)
     trends = analytics_service.get_price_trends(route, days)
@@ -645,7 +592,7 @@ def internal_error(e):
 # ============================================================================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5001))
     debug = os.environ.get('DEBUG', 'False').lower() == 'true'
     
     print(f"""

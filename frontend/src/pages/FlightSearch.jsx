@@ -22,7 +22,6 @@ const FlightSearch = () => {
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
 
-  // Auto-search if params provided
   useEffect(() => {
     if (searchData.origin && searchData.destination && searchData.travel_date) {
       handleSearch();
@@ -88,7 +87,6 @@ const FlightSearch = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
-        {/* Search Form */}
         <div className="card mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Search Flights</h2>
           <form onSubmit={handleSearch}>
@@ -144,7 +142,6 @@ const FlightSearch = () => {
           </form>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
             <AlertCircle className="h-5 w-5" />
@@ -152,14 +149,12 @@ const FlightSearch = () => {
           </div>
         )}
 
-        {/* Loading State */}
         {loading && (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
           </div>
         )}
 
-        {/* Results */}
         {!loading && searched && (
           <div>
             <div className="flex justify-between items-center mb-6">
@@ -190,7 +185,6 @@ const FlightSearch = () => {
                       onClick={() => navigate(`/flights/${flight.flight_id}`)}
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between">
-                        {/* Flight Info */}
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-4">
                             <div className="bg-primary-100 p-2 rounded-lg">
@@ -202,7 +196,6 @@ const FlightSearch = () => {
                             </div>
                           </div>
 
-                          {/* Route & Time */}
                           <div className="flex items-center space-x-4">
                             <div className="text-center">
                               <p className="text-2xl font-bold text-gray-900">{formatTime(flight.departure)}</p>
@@ -230,7 +223,6 @@ const FlightSearch = () => {
                           </div>
                         </div>
 
-                        {/* Price & Book */}
                         <div className="mt-6 md:mt-0 md:ml-8 md:pl-8 md:border-l border-gray-200 text-right">
                           <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${priceBadge.bg} ${priceBadge.text} mb-2`}>
                             <priceBadge.icon className="h-3 w-3" />
@@ -260,7 +252,6 @@ const FlightSearch = () => {
           </div>
         )}
 
-        {/* Initial State */}
         {!loading && !searched && (
           <div className="card text-center py-12">
             <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />

@@ -3,7 +3,6 @@ import { authAPI, customerAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
-// Only this specific email has admin access
 const ADMIN_EMAIL = 'admin@flightsync.com';
 
 export const AuthProvider = ({ children }) => {
@@ -18,7 +17,6 @@ export const AuthProvider = ({ children }) => {
     if (token && savedUser) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
-      // Check if this is THE admin account
       setIsAdmin(userData.email === ADMIN_EMAIL);
     }
     setLoading(false);
@@ -32,7 +30,6 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(customer));
       setUser(customer);
-      // Only the specific admin email gets admin access
       setIsAdmin(email === ADMIN_EMAIL);
       
       return { success: true };
@@ -52,7 +49,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(customer));
       setUser(customer);
-      setIsAdmin(false); // New registrations are never admin
+      setIsAdmin(false);
       
       return { success: true };
     } catch (error) {

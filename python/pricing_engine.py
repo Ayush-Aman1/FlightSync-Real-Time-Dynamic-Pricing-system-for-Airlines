@@ -1,8 +1,3 @@
-"""
-FlightSync - Dynamic Pricing Engine
-Implements surge pricing based on seat availability and demand patterns
-Adapted from MDP-based dynamic airline pricing research
-"""
 
 import numpy as np
 from decimal import Decimal
@@ -15,7 +10,6 @@ from config import get_pg_connection, get_mongo_connection
 
 
 class DemandLevel(Enum):
-    """Demand classification based on booking patterns"""
     VERY_LOW = "very_low"
     LOW = "low"
     NORMAL = "normal"
@@ -25,11 +19,10 @@ class DemandLevel(Enum):
 
 @dataclass
 class PricingFactors:
-    """Factors that influence dynamic pricing"""
-    occupancy_rate: float  # 0.0 to 1.0
+    occupancy_rate: float
     days_to_departure: int
-    time_of_day: int  # 0-23
-    day_of_week: int  # 0-6 (Monday-Sunday)
+    time_of_day: int
+    day_of_week: int
     is_holiday: bool
     is_peak_season: bool
     competitor_price: Optional[Decimal] = None
@@ -37,58 +30,46 @@ class PricingFactors:
 
 
 class DynamicPricingEngine:
-    """
-    Dynamic pricing engine that calculates optimal surge multipliers
-    based on multiple factors including occupancy, timing, and demand patterns.
-    
-    Based on MDP (Markov Decision Process) approach where:
-    - State: (available_seats, days_to_departure)
-    - Action: price_multiplier
-    - Reward: revenue from ticket sales
-    """
     
     # Occupancy-based surge thresholds
     OCCUPANCY_THRESHOLDS = {
-        0.30: 0.85,   # Low occupancy: discount
-        0.50: 1.00,   # Normal
-        0.70: 1.25,   # Moderate demand
-        0.85: 1.50,   # High demand
-        0.95: 2.00,   # Very high demand
-        1.00: 2.50,   # Last seats premium
+        0.30: 0.85,
+        0.50: 1.00,
+        0.70: 1.25,
+        0.85: 1.50,
+        0.95: 2.00,
+        1.00: 2.50,
     }
     
-    # Days to departure multipliers
     DEPARTURE_MULTIPLIERS = {
-        0: 2.50,    # Same day
-        1: 2.00,    # Tomorrow
-        3: 1.75,    # Within 3 days
-        7: 1.50,    # Within a week
-        14: 1.25,   # Within 2 weeks
-        30: 1.00,   # Month out
-        60: 0.90,   # 2 months out
-        90: 0.85,   # 3+ months out
+        0: 2.50,
+        1: 2.00,
+        3: 1.75,
+        7: 1.50,
+        14: 1.25,
+        30: 1.00,
+        60: 0.90,
+        90: 0.85,
     }
     
-    # Time of day factors (for departure time)
     TIME_FACTORS = {
-        (6, 9): 1.20,    # Morning rush
-        (9, 12): 1.10,   # Late morning
-        (12, 14): 1.00,  # Midday
-        (14, 17): 1.05,  # Afternoon
-        (17, 21): 1.25,  # Evening rush
-        (21, 24): 0.95,  # Late night
-        (0, 6): 0.85,    # Red-eye
+        (6, 9): 1.20,
+        (9, 12): 1.10,
+        (12, 14): 1.00,
+        (14, 17): 1.05,
+        (17, 21): 1.25,
+        (21, 24): 0.95,
+        (0, 6): 0.85,
     }
     
-    # Day of week factors
     DAY_FACTORS = {
-        0: 1.15,  # Monday - business travel
-        1: 1.05,  # Tuesday
-        2: 1.00,  # Wednesday
-        3: 1.10,  # Thursday
-        4: 1.25,  # Friday - weekend start
-        5: 1.20,  # Saturday
-        6: 1.30,  # Sunday - return travel
+        0: 1.15,
+        1: 1.05,
+        2: 1.00,
+        3: 1.10,
+        4: 1.25,
+        5: 1.20,
+        6: 1.30,
     }
     
     def __init__(self, min_multiplier: float = 0.5, max_multiplier: float = 5.0):
@@ -105,15 +86,8 @@ class DynamicPricingEngine:
         base_price: Decimal,
         flight_id: Optional[int] = None
     ) -> Tuple[Decimal, Dict]:
-        """
-        Calculate the optimal surge multiplier for a flight.
-        
-        Returns:
-            Tuple of (surge_multiplier, breakdown_dict)
-        """
         now = datetime.now()
         
-        # Calculate factors
         factors = PricingFactors(
             occupancy_rate=1.0 - (available_seats / total_seats) if total_seats > 0 else 0,
             days_to_departure=(dep_time - now).days,
@@ -124,17 +98,12 @@ class DynamicPricingEngine:
             historical_demand=self._get_historical_demand(flight_id) if flight_id else None
         )
         
-        # Calculate individual multipliers
         occupancy_mult = self._get_occupancy_multiplier(factors.occupancy_rate)
         departure_mult = self._get_departure_multiplier(factors.days_to_departure)
         time_mult = self._get_time_multiplier(factors.time_of_day)
         day_mult = self._get_day_multiplier(factors.day_of_week)
         seasonal_mult = self._get_seasonal_multiplier(factors)
         
-        # Combine multipliers with weights
-        # Occupancy is the primary driver (weight: 0.4)
-        # Days to departure is secondary (weight: 0.3)
-        # Other factors combined (weight: 0.3)
         
         weighted_surge = (
             0.40 * occupancy_mult +
@@ -144,10 +113,8 @@ class DynamicPricingEngine:
             0.10 * seasonal_mult
         )
         
-        # Apply bounds
         final_multiplier = max(self.min_multiplier, min(self.max_multiplier, weighted_surge))
         
-        # Build breakdown for analytics
         breakdown = {
             'occupancy_rate': round(factors.occupancy_rate * 100, 2),
             'days_to_departure': factors.days_to_departure,
@@ -166,32 +133,27 @@ class DynamicPricingEngine:
         return Decimal(str(round(final_multiplier, 2))), breakdown
     
     def _get_occupancy_multiplier(self, occupancy_rate: float) -> float:
-        """Get multiplier based on seat occupancy"""
         for threshold, multiplier in sorted(self.OCCUPANCY_THRESHOLDS.items()):
             if occupancy_rate <= threshold:
                 return multiplier
-        return 2.50  # Maximum for full/near-full flights
+        return 2.50
     
     def _get_departure_multiplier(self, days: int) -> float:
-        """Get multiplier based on days to departure"""
         for day_threshold, multiplier in sorted(self.DEPARTURE_MULTIPLIERS.items()):
             if days <= day_threshold:
                 return multiplier
-        return 0.85  # Discount for very early bookings
+        return 0.85
     
     def _get_time_multiplier(self, hour: int) -> float:
-        """Get multiplier based on departure time"""
         for (start, end), multiplier in self.TIME_FACTORS.items():
             if start <= hour < end:
                 return multiplier
         return 1.0
     
     def _get_day_multiplier(self, day: int) -> float:
-        """Get multiplier based on day of week"""
         return self.DAY_FACTORS.get(day, 1.0)
     
     def _get_seasonal_multiplier(self, factors: PricingFactors) -> float:
-        """Get multiplier based on seasonal factors"""
         multiplier = 1.0
         
         if factors.is_holiday:
@@ -202,27 +164,21 @@ class DynamicPricingEngine:
         return multiplier
     
     def _check_holiday(self, date: datetime) -> bool:
-        """Check if date is a holiday (simplified)"""
-        # Major Indian holidays (simplified check)
         holidays = [
-            (1, 26),   # Republic Day
-            (8, 15),   # Independence Day
-            (10, 2),   # Gandhi Jayanti
-            (11, 14),  # Diwali region (approximate)
-            (12, 25),  # Christmas
+            (1, 26),
+            (8, 15),
+            (10, 2),
+            (11, 14),
+            (12, 25),
         ]
         return (date.month, date.day) in holidays
     
     def _check_peak_season(self, date: datetime) -> bool:
-        """Check if date falls in peak travel season"""
-        # Peak seasons: Dec-Jan (winter holidays), Apr-May (summer), Oct (Diwali)
         peak_months = [4, 5, 10, 12, 1]
         return date.month in peak_months
     
     def _get_historical_demand(self, flight_id: int) -> Optional[float]:
-        """Get historical demand pattern from MongoDB"""
         try:
-            # Query MongoDB for historical booking patterns
             pipeline = [
                 {"$match": {"flight_id": flight_id}},
                 {"$unwind": "$price_snapshots"},
@@ -239,12 +195,6 @@ class DynamicPricingEngine:
         return None
     
     def update_flight_price(self, flight_id: int) -> Dict:
-        """
-        Update the price for a specific flight and sync to MongoDB.
-        
-        Returns:
-            Dict with old and new pricing information
-        """
         # Get current flight data
         query = """
             SELECT f.flight_id, f.flight_code, f.available_seats, f.total_seats,
@@ -259,7 +209,6 @@ class DynamicPricingEngine:
         if not flight:
             raise ValueError(f"Flight {flight_id} not found")
         
-        # Calculate new surge
         new_surge, breakdown = self.calculate_surge_multiplier(
             available_seats=flight['available_seats'],
             total_seats=flight['total_seats'],
@@ -270,7 +219,6 @@ class DynamicPricingEngine:
         
         new_price = flight['base_price'] * new_surge
         
-        # Update PostgreSQL
         update_query = """
             UPDATE prices 
             SET surge_multiplier = %s, current_price = %s, last_updated = NOW()
@@ -278,7 +226,6 @@ class DynamicPricingEngine:
         """
         self.pg.execute(update_query, (new_surge, new_price, flight_id))
         
-        # Sync to MongoDB price history
         self._sync_to_mongodb(flight, new_surge, new_price, breakdown)
         
         return {
@@ -298,7 +245,6 @@ class DynamicPricingEngine:
         new_price: Decimal,
         breakdown: Dict
     ):
-        """Sync price update to MongoDB for historical tracking"""
         try:
             snapshot = {
                 'timestamp': datetime.now(),
@@ -332,12 +278,7 @@ class DynamicPricingEngine:
             print(f"MongoDB sync error: {e}")
     
     def batch_update_prices(self, flight_ids: Optional[list] = None) -> list:
-        """
-        Update prices for multiple flights.
-        If no flight_ids provided, updates all scheduled flights.
-        """
         if flight_ids is None:
-            # Get all scheduled flights
             query = "SELECT flight_id FROM flights WHERE status = 'SCHEDULED'"
             results = self.pg.execute(query)
             flight_ids = [r['flight_id'] for r in results]
@@ -354,17 +295,12 @@ class DynamicPricingEngine:
 
 
 class PricingRecommendationEngine:
-    """
-    Generates AI-powered pricing recommendations based on
-    historical data and market analysis.
-    """
     
     def __init__(self):
         self.pg = get_pg_connection()
         self.mongo = get_mongo_connection()
     
     def generate_insights(self, flight_id: int) -> Dict:
-        """Generate pricing insights for a flight"""
         
         # Get flight details
         flight = self.pg.execute_one("""
@@ -377,13 +313,10 @@ class PricingRecommendationEngine:
         if not flight:
             raise ValueError(f"Flight {flight_id} not found")
         
-        # Analyze historical prices from MongoDB
         history = self._analyze_price_history(flight_id)
         
-        # Generate predictions
         predictions = self._generate_predictions(flight, history)
         
-        # Generate recommendations
         recommendations = self._generate_recommendations(flight, predictions)
         
         insight = {
@@ -397,8 +330,8 @@ class PricingRecommendationEngine:
             'market_factors': {
                 'days_to_departure': (flight['dep_time'] - datetime.now()).days,
                 'current_occupancy': round((1 - flight['available_seats']/flight['total_seats']) * 100, 2),
-                'seasonality_factor': 1.0,  # Placeholder
-                'day_of_week_factor': 1.0,  # Placeholder
+                'seasonality_factor': 1.0,
+                'day_of_week_factor': 1.0
             },
             'historical_analysis': history,
             'recommendations': recommendations,
@@ -407,13 +340,11 @@ class PricingRecommendationEngine:
             'expires_at': datetime.now() + timedelta(hours=6)
         }
         
-        # Store in MongoDB
         self._store_insight(insight)
         
         return insight
     
     def _analyze_price_history(self, flight_id: int) -> Dict:
-        """Analyze historical price data from MongoDB"""
         try:
             pipeline = [
                 {'$match': {'flight_id': flight_id}},
@@ -452,16 +383,14 @@ class PricingRecommendationEngine:
         }
     
     def _generate_predictions(self, flight: Dict, history: Dict) -> Dict:
-        """Generate price predictions"""
         current_price = float(flight['current_price'])
         occupancy = 1 - (flight['available_seats'] / flight['total_seats'])
         
-        # Simple prediction model (can be enhanced with ML)
         optimal_price = current_price
         if occupancy < 0.5:
-            optimal_price = current_price * 0.95  # Suggest discount
+            optimal_price = current_price * 0.95
         elif occupancy > 0.8:
-            optimal_price = current_price * 1.10  # Suggest increase
+            optimal_price = current_price * 1.10
         
         return {
             'optimal_price': round(optimal_price, 2),
@@ -472,7 +401,6 @@ class PricingRecommendationEngine:
         }
     
     def _generate_recommendations(self, flight: Dict, predictions: Dict) -> list:
-        """Generate actionable recommendations"""
         recommendations = []
         occupancy = 1 - (flight['available_seats'] / flight['total_seats'])
         days_to_dep = (flight['dep_time'] - datetime.now()).days
@@ -504,7 +432,6 @@ class PricingRecommendationEngine:
         return recommendations
     
     def _store_insight(self, insight: Dict):
-        """Store insight in MongoDB"""
         try:
             self.mongo.ai_pricing_insights.update_one(
                 {'flight_id': insight['flight_id']},
@@ -515,17 +442,12 @@ class PricingRecommendationEngine:
             print(f"Error storing insight: {e}")
 
 
-# Convenience functions
 def calculate_price(
     available_seats: int,
     total_seats: int,
     dep_time: datetime,
     base_price: Decimal
 ) -> Tuple[Decimal, Decimal]:
-    """
-    Calculate current price for a flight.
-    Returns: (surge_multiplier, current_price)
-    """
     engine = DynamicPricingEngine()
     surge, _ = engine.calculate_surge_multiplier(
         available_seats, total_seats, dep_time, base_price
@@ -534,6 +456,5 @@ def calculate_price(
 
 
 def refresh_all_prices():
-    """Refresh prices for all scheduled flights"""
     engine = DynamicPricingEngine()
     return engine.batch_update_prices()

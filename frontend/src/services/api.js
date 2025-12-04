@@ -9,7 +9,6 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -18,7 +17,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle auth errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -31,13 +29,11 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API
 export const authAPI = {
   register: (data) => api.post("/auth/register", data),
   login: (data) => api.post("/auth/login", data),
 };
 
-// Customer API
 export const customerAPI = {
   getProfile: () => api.get("/customers/me"),
   updateProfile: (data) => api.put("/customers/me", data),
@@ -48,7 +44,6 @@ export const customerAPI = {
   redeemPoints: (data) => api.post("/customers/me/loyalty/redeem", data),
 };
 
-// Flight API
 export const flightAPI = {
   search: (params) => api.post("/flights/search", params),
   getDetails: (id) => api.get(`/flights/${id}`),
@@ -57,7 +52,6 @@ export const flightAPI = {
   getRoutePricing: (route) => api.get(`/flights/routes/${route}/pricing`),
 };
 
-// Booking API
 export const bookingAPI = {
   create: (data) => api.post("/bookings", data),
   get: (id) => api.get(`/bookings/${id}`),
@@ -65,35 +59,29 @@ export const bookingAPI = {
   cancel: (id, reason) => api.post(`/bookings/${id}/cancel`, { reason }),
 };
 
-// Payment API
 export const paymentAPI = {
   process: (data) => api.post("/payments", data),
   get: (id) => api.get(`/payments/${id}`),
 };
 
-// Review API
 export const reviewAPI = {
   submit: (data) => api.post("/reviews", data),
   getFlightReviews: (flightId) => api.get(`/flights/${flightId}/reviews`),
   markHelpful: (id) => api.post(`/reviews/${id}/helpful`),
 };
 
-// Admin API
 export const adminAPI = {
-  // Flight Management
   getAllFlights: () => api.get("/admin/flights"),
   addFlight: (data) => api.post("/admin/flights", data),
   cancelFlight: (flightId, reason) =>
     api.post(`/admin/flights/${flightId}/cancel`, { reason }),
   updateFlight: (flightId, data) => api.put(`/admin/flights/${flightId}`, data),
 
-  // Pricing
   refreshPrice: (flightId) => api.post(`/admin/pricing/refresh/${flightId}`),
   refreshAllPrices: () => api.post("/admin/pricing/refresh-all"),
   getPricingInsights: (flightId) =>
     api.get(`/admin/pricing/insights/${flightId}`),
 
-  // Analytics
   getRevenueAnalytics: (start, end) =>
     api.get(`/admin/analytics/revenue?start=${start}&end=${end}`),
   getRouteAnalytics: (limit = 10) =>

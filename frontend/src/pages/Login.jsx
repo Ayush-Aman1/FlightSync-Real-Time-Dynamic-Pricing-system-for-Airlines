@@ -25,7 +25,6 @@ const Login = () => {
     setLoading(false);
   };
 
-  // Demo credentials
   const fillDemoCustomer = () => {
     setFormData({ email: 'rahul.sharma@email.com', password: 'password123' });
   };
@@ -37,7 +36,6 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-600 to-primary-900 py-12 px-4">
       <div className="max-w-md w-full">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
             <Plane className="h-8 w-8 text-primary-600" />
@@ -46,7 +44,6 @@ const Login = () => {
           <p className="text-primary-200 mt-2">Sign in to your FlightSync account</p>
         </div>
 
-        {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2 text-red-700">
@@ -105,7 +102,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Demo Credentials */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-600 text-center mb-3">Demo Accounts (for testing)</p>
             <div className="flex space-x-3">
