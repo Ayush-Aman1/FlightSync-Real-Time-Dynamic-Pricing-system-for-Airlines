@@ -1,3 +1,7 @@
+"""
+FlightSync - Service Layer
+Business logic for flights, bookings, customers, and analytics
+"""
 
 from datetime import datetime, date, timedelta
 from decimal import Decimal
@@ -20,12 +24,14 @@ from pricing_engine import DynamicPricingEngine
 # ============================================================================
 
 class CustomerService:
+    """Service for customer-related operations"""
     
     def __init__(self):
         self.pg = get_pg_connection()
         self.mongo = get_mongo_connection()
     
     def create_customer(self, data: CustomerCreate) -> Dict:
+        """Register a new customer"""
         # Hash password
         pass_hash = hashlib.sha256(data.password.encode()).hexdigest()
         
@@ -41,6 +47,7 @@ class CustomerService:
         return dict(result)
     
     def get_customer(self, cust_id: int) -> Optional[Dict]:
+        """Get customer by ID"""
         query = """
             SELECT cust_id, fname, lname, email, phone, dob, 
                    balance, loyalty_pts, loyalty_tier, created_at, updated_at
@@ -50,11 +57,13 @@ class CustomerService:
         return dict(result) if result else None
     
     def get_customer_by_email(self, email: str) -> Optional[Dict]:
+        """Get customer by email"""
         query = "SELECT * FROM customers WHERE email = %s"
         result = self.pg.execute_one(query, (email,))
         return dict(result) if result else None
     
     def authenticate(self, email: str, password: str) -> Optional[Dict]:
+        """Authenticate customer login"""
         pass_hash = hashlib.sha256(password.encode()).hexdigest()
         query = """
             SELECT cust_id, fname, lname, email, loyalty_tier, loyalty_pts
@@ -64,6 +73,7 @@ class CustomerService:
         return dict(result) if result else None
     
     def update_customer(self, cust_id: int, data: CustomerUpdate) -> Dict:
+        """Update customer profile"""
         updates = []
         values = []
         
@@ -93,11 +103,13 @@ class CustomerService:
         return dict(result)
     
     def get_dashboard(self, cust_id: int) -> CustomerDashboard:
+        """Get customer dashboard data"""
         query = "SELECT * FROM get_customer_dashboard(%s)"
         result = self.pg.execute_one(query, (cust_id,))
         return CustomerDashboard(**result)
     
     def get_booking_history(self, cust_id: int) -> List[Dict]:
+        """Get customer's booking history"""
         query = """
             SELECT * FROM vw_customer_booking_history
             WHERE cust_id = %s
@@ -107,11 +119,13 @@ class CustomerService:
         return [dict(r) for r in results]
     
     def get_loyalty_history(self, cust_id: int, limit: int = 20) -> List[Dict]:
+        """Get loyalty points transaction history"""
         query = "SELECT * FROM get_loyalty_history(%s, %s)"
         results = self.pg.execute(query, (cust_id, limit))
         return [dict(r) for r in results]
     
     def redeem_points(self, cust_id: int, points: int, description: str) -> str:
+        """Redeem loyalty points"""
         query = "SELECT redeem_points(%s, %s, %s)"
         result = self.pg.execute_one(query, (cust_id, points, description))
         return result['redeem_points']
@@ -122,6 +136,7 @@ class CustomerService:
 # ============================================================================
 
 class FlightService:
+    """Service for flight-related operations"""
     
     def __init__(self):
         self.pg = get_pg_connection()
@@ -129,6 +144,7 @@ class FlightService:
         self.pricing_engine = DynamicPricingEngine()
     
     def search_flights(self, request: FlightSearchRequest) -> List[FlightSearch]:
+        """Search for available flights"""
         query = "SELECT * FROM search_flights(%s, %s, %s, %s)"
         results = self.pg.execute(query, (
             request.origin,
@@ -153,11 +169,13 @@ class FlightService:
                 aircraft_model=r['aircraft_model']
             ))
         
+        # Log search to MongoDB for behavior analytics
         self._log_search(request)
         
         return flights
     
     def get_flight_details(self, flight_id: int) -> Optional[Dict]:
+        """Get detailed flight information"""
         query = """
             SELECT * FROM vw_flight_search
             WHERE flight_id = %s
@@ -165,6 +183,7 @@ class FlightService:
         result = self.pg.execute_one(query, (flight_id,))
         
         if result:
+            # Get reviews summary
             reviews = self.pg.execute_one("""
                 SELECT * FROM vw_flight_reviews_summary
                 WHERE flight_id = %s
@@ -178,11 +197,13 @@ class FlightService:
         return None
     
     def get_route_pricing(self, origin: str, destination: str) -> List[Dict]:
+        """Get pricing for a specific route"""
         query = "SELECT * FROM get_route_pricing(%s, %s)"
         results = self.pg.execute(query, (origin, destination))
         return [dict(r) for r in results]
     
     def get_price_history(self, flight_id: int, days: int = 7) -> List[Dict]:
+        """Get price history from MongoDB"""
         try:
             cutoff = datetime.now() - timedelta(days=days)
             pipeline = [
@@ -204,9 +225,11 @@ class FlightService:
             return []
     
     def refresh_price(self, flight_id: int) -> Dict:
+        """Manually refresh price for a flight"""
         return self.pricing_engine.update_flight_price(flight_id)
     
     def _log_search(self, request: FlightSearchRequest):
+        """Log search to MongoDB for analytics"""
         try:
             search_log = {
                 'origin': request.origin,
@@ -215,32 +238,35 @@ class FlightService:
                 'passengers': request.passengers,
                 'searched_at': datetime.now()
             }
+            # This would be associated with a session/customer in real implementation
         except Exception:
             pass
     
     def get_all_flights(self) -> List[Dict]:
+        """Get all flights for admin management"""
         query = """
             SELECT 
                 f.flight_id, f.flight_code, f.origin, f.destination,
                 f.dep_time, f.arr_time, f.status, f.available_seats, f.total_seats,
-                a.model as aircraft_model, a.aircraft_no,
+                f.aircraft_id,
                 p.base_price, p.current_price, p.surge_multiplier
             FROM flights f
-            LEFT JOIN aircraft a ON f.aircraft_id = a.aircraft_id
             LEFT JOIN prices p ON f.flight_id = p.flight_id
             ORDER BY f.dep_time DESC
         """
         results = self.pg.execute(query)
-        return [dict(r) for r in results]
+        return [dict(r) for r in results] if results else []
     
     def add_flight(self, flight_code: str, origin: str, destination: str,
                    dep_time: str, arr_time: str, aircraft_id: int = None,
                    base_price: float = 5000, total_seats: int = 180) -> Dict:
+        """Add a new flight (Admin only)"""
         
         # Parse datetime strings
         dep_datetime = datetime.fromisoformat(dep_time.replace('T', ' '))
         arr_datetime = datetime.fromisoformat(arr_time.replace('T', ' '))
         
+        # Check for duplicate flight code
         existing = self.pg.execute_one(
             "SELECT flight_id FROM flights WHERE flight_code = %s AND dep_time::date = %s",
             (flight_code, dep_datetime.date())
@@ -248,6 +274,7 @@ class FlightService:
         if existing:
             raise ValueError(f"Flight {flight_code} already exists for this date")
         
+        # Insert flight
         flight_query = """
             INSERT INTO flights (flight_code, origin, destination, dep_time, arr_time, 
                                 aircraft_id, status, available_seats, total_seats)
@@ -261,6 +288,7 @@ class FlightService:
         
         flight_id = result['flight_id']
         
+        # Create price entry
         price_query = """
             INSERT INTO prices (flight_id, base_price, current_price, surge_multiplier, last_updated)
             VALUES (%s, %s, %s, 1.0, NOW())
@@ -274,6 +302,7 @@ class FlightService:
         }
     
     def cancel_flight(self, flight_id: int, reason: str) -> Dict:
+        """Cancel a flight and process refunds for all bookings"""
         
         # Get flight info
         flight = self.pg.execute_one(
@@ -288,11 +317,13 @@ class FlightService:
         if flight['status'] == 'ARRIVED':
             raise ValueError("Cannot cancel a completed flight")
         
+        # Update flight status
         self.pg.execute(
             "UPDATE flights SET status = 'CANCELLED' WHERE flight_id = %s",
             (flight_id,)
         )
         
+        # Get all active bookings for this flight
         bookings_query = """
             SELECT b.booking_id, b.cust_id, b.total_cost, b.booking_status
             FROM bookings b
@@ -305,16 +336,19 @@ class FlightService:
         total_refunded = 0
         
         for booking in bookings:
+            # Update booking status
             self.pg.execute(
                 "UPDATE bookings SET booking_status = 'REFUNDED' WHERE booking_id = %s",
                 (booking['booking_id'],)
             )
             
+            # Refund to customer balance
             self.pg.execute(
                 "UPDATE customers SET balance = balance + %s WHERE cust_id = %s",
                 (booking['total_cost'], booking['cust_id'])
             )
             
+            # Update payment status
             self.pg.execute("""
                 UPDATE payments SET payment_status = 'REFUNDED' 
                 WHERE booking_id = %s AND payment_status = 'SUCCESS'
@@ -334,6 +368,7 @@ class FlightService:
         }
     
     def update_flight(self, flight_id: int, data: Dict) -> Dict:
+        """Update flight details"""
         allowed_fields = ['origin', 'destination', 'dep_time', 'arr_time', 'status', 'aircraft_no']
         updates = []
         values = []
@@ -358,6 +393,7 @@ class FlightService:
 # ============================================================================
 
 class BookingService:
+    """Service for booking-related operations"""
     
     CLASS_MULTIPLIERS = {
         BookingClass.ECONOMY: Decimal("1.0"),
@@ -371,6 +407,7 @@ class BookingService:
         self.mongo = get_mongo_connection()
     
     def create_booking(self, cust_id: int, data: BookingCreate) -> Dict:
+        """Create a new booking"""
         # Get current price
         price_query = """
             SELECT current_price FROM prices WHERE flight_id = %s
@@ -384,6 +421,7 @@ class BookingService:
         class_multiplier = self.CLASS_MULTIPLIERS.get(data.booking_class, Decimal("1.0"))
         total_cost = current_price * data.seats_booked * class_multiplier
         
+        # Create booking (triggers handle seat updates, pricing, loyalty)
         query = """
             INSERT INTO bookings (cust_id, flight_id, seats_booked, total_cost, 
                                   booking_class, special_requests, status)
@@ -398,11 +436,13 @@ class BookingService:
         
         booking = dict(result)
         
+        # Log to MongoDB for behavior tracking
         self._log_booking(cust_id, booking)
         
         return booking
     
     def get_booking(self, booking_id: int) -> Optional[Dict]:
+        """Get booking details"""
         query = """
             SELECT b.*, f.flight_code, f.origin, f.destination,
                    f.dep_time, f.arr_time, p.status as payment_status
@@ -415,17 +455,20 @@ class BookingService:
         return dict(result) if result else None
     
     def get_upcoming_bookings(self, cust_id: int) -> List[Dict]:
+        """Get upcoming bookings for a customer"""
         query = "SELECT * FROM get_upcoming_bookings(%s)"
         results = self.pg.execute(query, (cust_id,))
         return [dict(r) for r in results]
     
     def cancel_booking(self, booking_id: int, reason: str = None) -> str:
+        """Cancel a booking"""
         reason = reason or "Customer requested cancellation"
         query = "SELECT cancel_booking(%s, %s)"
         result = self.pg.execute_one(query, (booking_id, reason))
         return result['cancel_booking']
     
     def _log_booking(self, cust_id: int, booking: Dict):
+        """Log booking to MongoDB"""
         try:
             activity = {
                 'action': 'completed_booking',
@@ -437,6 +480,7 @@ class BookingService:
                     'total_cost': float(booking['total_cost'])
                 }
             }
+            # Would be associated with customer session
         except Exception:
             pass
 
@@ -446,14 +490,17 @@ class BookingService:
 # ============================================================================
 
 class PaymentService:
+    """Service for payment processing"""
     
     def __init__(self):
         self.pg = get_pg_connection()
     
     def process_payment(self, cust_id: int, data: PaymentCreate) -> Dict:
+        """Process a payment for a booking"""
         # Generate transaction ID
         transaction_id = f"TXN_{secrets.token_hex(8).upper()}"
         
+        # Insert payment record
         query = """
             INSERT INTO payments (booking_id, cust_id, amount, payment_method, 
                                   transaction_id, status)
@@ -469,11 +516,13 @@ class PaymentService:
         return dict(result)
     
     def get_payment(self, payment_id: int) -> Optional[Dict]:
+        """Get payment details"""
         query = "SELECT * FROM payments WHERE payment_id = %s"
         result = self.pg.execute_one(query, (payment_id,))
         return dict(result) if result else None
     
     def refund_payment(self, payment_id: int) -> str:
+        """Process a refund"""
         query = """
             UPDATE payments SET status = 'REFUNDED'
             WHERE payment_id = %s AND status = 'SUCCESS'
@@ -491,12 +540,14 @@ class PaymentService:
 # ============================================================================
 
 class ReviewService:
+    """Service for review management"""
     
     def __init__(self):
         self.pg = get_pg_connection()
         self.mongo = get_mongo_connection()
     
     def submit_review(self, cust_id: int, data: ReviewCreate) -> str:
+        """Submit a flight review"""
         query = """
             SELECT submit_review(%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
@@ -506,21 +557,25 @@ class ReviewService:
             data.service_rating, data.comfort_rating
         ))
         
+        # Also store in MongoDB with extended schema
         self._store_mongo_review(cust_id, data)
         
         return result['submit_review']
     
     def get_flight_reviews(self, flight_id: int) -> List[Dict]:
+        """Get reviews for a flight"""
         query = "SELECT * FROM get_flight_reviews(%s)"
         results = self.pg.execute(query, (flight_id,))
         return [dict(r) for r in results]
     
     def get_reviews_summary(self, flight_id: int) -> Dict:
+        """Get review summary for a flight"""
         query = "SELECT * FROM vw_flight_reviews_summary WHERE flight_id = %s"
         result = self.pg.execute_one(query, (flight_id,))
         return dict(result) if result else None
     
     def mark_helpful(self, review_id: int) -> bool:
+        """Mark a review as helpful"""
         query = """
             UPDATE reviews SET helpful_count = helpful_count + 1
             WHERE review_id = %s
@@ -530,6 +585,7 @@ class ReviewService:
         return result is not None
     
     def _store_mongo_review(self, cust_id: int, data: ReviewCreate):
+        """Store extended review in MongoDB"""
         try:
             review_doc = {
                 'flight_id': data.flight_id,
@@ -559,32 +615,38 @@ class ReviewService:
 # ============================================================================
 
 class AnalyticsService:
+    """Service for analytics and reporting"""
     
     def __init__(self):
         self.pg = get_pg_connection()
         self.mongo = get_mongo_connection()
     
     def get_revenue_report(self, start_date: date, end_date: date) -> List[Dict]:
+        """Get revenue report for date range"""
         query = "SELECT * FROM get_revenue_report(%s, %s)"
         results = self.pg.execute(query, (start_date, end_date))
         return [dict(r) for r in results]
     
     def get_top_routes(self, limit: int = 10) -> List[Dict]:
+        """Get top routes by revenue"""
         query = "SELECT * FROM get_top_routes(%s)"
         results = self.pg.execute(query, (limit,))
         return [dict(r) for r in results]
     
     def get_route_performance(self) -> List[Dict]:
+        """Get route performance metrics"""
         query = "SELECT * FROM vw_route_performance"
         results = self.pg.execute(query)
         return [dict(r) for r in results]
     
     def get_loyalty_analytics(self) -> List[Dict]:
+        """Get loyalty program analytics"""
         query = "SELECT * FROM vw_loyalty_analytics ORDER BY lifetime_value DESC LIMIT 100"
         results = self.pg.execute(query)
         return [dict(r) for r in results]
     
     def get_payment_summary(self, days: int = 30) -> List[Dict]:
+        """Get payment summary"""
         query = """
             SELECT * FROM vw_payment_summary
             WHERE payment_day >= CURRENT_DATE - %s
@@ -593,6 +655,7 @@ class AnalyticsService:
         return [dict(r) for r in results]
     
     def get_abandoned_carts(self, hours: int = 24) -> List[Dict]:
+        """Get abandoned carts from MongoDB"""
         try:
             cutoff = datetime.now() - timedelta(hours=hours)
             pipeline = [
@@ -613,6 +676,7 @@ class AnalyticsService:
             return []
     
     def get_price_trends(self, route: str = None, days: int = 30) -> List[Dict]:
+        """Get price trends from MongoDB"""
         try:
             cutoff = datetime.now() - timedelta(days=days)
             match_stage = {"price_snapshots.timestamp": {"$gte": cutoff}}
