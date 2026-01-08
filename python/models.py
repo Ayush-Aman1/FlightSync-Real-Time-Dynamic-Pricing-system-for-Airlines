@@ -1,3 +1,7 @@
+"""
+FlightSync - Data Models
+Pydantic models for type validation and serialization
+"""
 
 from datetime import datetime, date
 from decimal import Decimal
@@ -67,7 +71,9 @@ class TransactionType(str, Enum):
 class PricingTier(str, Enum):
     DISCOUNTED = "DISCOUNTED"
     NORMAL = "NORMAL"
+    MODERATE = "MODERATE"
     MODERATE_DEMAND = "MODERATE_DEMAND"
+    HIGH = "HIGH"
     HIGH_DEMAND = "HIGH_DEMAND"
     PREMIUM = "PREMIUM"
 
@@ -217,6 +223,7 @@ class Price(PriceBase):
 
 
 class PriceSnapshot(BaseModel):
+    """For MongoDB price history"""
     timestamp: datetime
     base_price: Decimal
     current_price: Decimal
@@ -402,12 +409,14 @@ class FlightReviewSummary(BaseModel):
 # ============================================================================
 
 class CustomerActivity(BaseModel):
+    """Single activity in customer behavior log"""
     action: str
     timestamp: datetime
     details: Optional[dict] = None
 
 
 class CustomerBehavior(BaseModel):
+    """Customer behavior document for MongoDB"""
     customer_id: int
     session_id: str
     device_info: Optional[dict] = None
@@ -420,6 +429,7 @@ class CustomerBehavior(BaseModel):
 
 
 class AIPricingInsight(BaseModel):
+    """AI pricing insight document for MongoDB"""
     flight_id: int
     flight_code: str
     route: dict
@@ -433,6 +443,7 @@ class AIPricingInsight(BaseModel):
 
 
 class CachedFlight(BaseModel):
+    """Cached flight data for MongoDB"""
     cache_key: str
     flight_id: int
     flight_code: str
